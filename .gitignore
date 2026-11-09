@@ -1,0 +1,7 @@
+# foldery do ignorowania
+genomes_all/
+genomes_test/
+Gordon_et_al_2017_raw_assemblies/
+input/
+log/
+output/
