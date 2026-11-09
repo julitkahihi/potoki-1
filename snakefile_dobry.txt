@@ -1,0 +1,105 @@
+genes, = glob_wildcards('input/queries/{gene}.fna')
+genomes, = glob_wildcards('genomes_test/{genome}.fna.gz')
+
+blast_cols = 'qseqid qlen sseqid length qcovs pident evalue sseq'
+
+rule all:
+    input:
+        'output/tree.newick',
+        'output/tree.png'
+
+rule blastn:
+    conda:
+        'envs/powb-blast.yml'
+    params:
+        cols=blast_cols
+    input:
+        query='input/queries/{gene}.fna',
+        genome='genomes_test/{genome}.fna.gz'
+    output:
+        'output/blastn/blastn_{genome}_{gene}.tsv'
+    log:
+        'log/blastn/{genome}_{gene}.log'
+    shell:
+        "blastn -query {input.query} -subject <(zcat {input.genome}) "
+        "-outfmt '6 {params.cols}' > {output} 2> {log}"
+
+rule filter:
+    conda:
+        'envs/powb-python.yml'
+    params:
+        qcovs=100,
+        cols=blast_cols
+    input:
+        rules.blastn.output
+    output:
+        'output/filter/filtered_{genome}_{gene}.tsv'
+    log:
+        'log/filter/{genome}_{gene}.log'
+    shell:
+        "python scripts/filter.py --asmid {wildcards.genome} "
+        "--qcovs {params.qcovs} --eqlen --cols '{params.cols}' "
+        "--input {input} --output {output} 2> {log}"
+
+rule merge_flt:
+    input:
+        expand(rules.filter.output[0], gene=genes, allow_missing=True)
+    output:
+        'output/merge_flt/merged_{genome}.tsv'
+    log:
+        'log/merge_flt/{genome}.log'
+    script:
+        'scripts/merge_flt.sh'
+
+rule mlst:
+    conda:
+        'envs/powb-python.yml'
+    input:
+        alleles=rules.merge_flt.output,
+        allelesdb='input/alleles.fna',
+        mlstdb='input/bigsdb.tsv'
+    output:
+        'output/mlst/mlst_{genome}.tsv'
+    log:
+        'log/mlst/{genome}.log'
+    shell:
+        "python scripts/mlst.py --asmid {wildcards.genome} "
+        "--allelesdb {input.allelesdb} --mlstdb {input.mlstdb} "
+        "--alleles {input.alleles} --output {output} 2> {log}"
+
+rule merge_mlst:
+    input:
+        expand(rules.mlst.output[0], genome=genomes)
+    output:
+        'output/merged.tsv'
+    log:
+        'log/merge_mlst.log'
+    script:
+        'scripts/merge_mlst.sh'
+
+rule unique:
+    conda:
+        'envs/powb-python.yml'
+    input:
+        rules.merge_mlst.output
+    output:
+        'output/unique.fna'
+    log:
+        'log/unique.log'
+    shell:
+        "python scripts/unique.py --input {input} --output {output} &> {log}"
+
+rule tree:
+    conda:
+        'envs/powb-python.yml'
+    input:
+        mlst=rules.merge_mlst.output,
+        seqs=rules.unique.output
+    output:
+        newick='output/tree.newick',
+        png='output/tree.png'
+    log:
+        'log/tree.log'
+    shell:
+        "python scripts/tree.py --mlst {input.mlst} --seqs {input.seqs} "
+        "--outtree {output.newick} --outvis {output.png} 2> {log}"
