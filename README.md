@@ -114,4 +114,4 @@ snakemake --cores 4 --sdm conda --config genomesdir=Gordon_et_al_2017_raw_assemb
 Wyniki pośrednie zapisywane są w podkatalogach `output/`, a logi
 poszczególnych zadań w katalogu `log/`.
 
-![Drzewo filogenetyczne ST](results/tree.png)
+![Drzewo filogenetyczne ST](tree.png)
