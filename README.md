@@ -96,6 +96,12 @@ Uruchomienie na innym zestawie genomów, bez edycji plików:
 snakemake --cores 4 --sdm conda --config genomesdir=genomes_all
 ```
 
+Uruchomienie na ostatecznym zestawie genomów, bez edycji plików:
+
+```
+snakemake --cores 4 --sdm conda --config genomesdir=Gordon_et_al_2017_raw_assemblies
+```
+
 ## Wyniki
 
 | Plik                 | Zawartość                                          |
